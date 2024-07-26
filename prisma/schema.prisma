@@ -1,0 +1,78 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model cats {
+  id   Int    @id @default(autoincrement())
+  name String @db.VarChar(50)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+enum TUserRoles {
+  superadmin
+  admin
+  user
+}
+
+model users {
+  id       Int        @id @default(autoincrement())
+  user_id  String     @unique
+  name     String     @db.VarChar(50)
+  email    String     @unique
+  password String
+  avatar   String     @default("")
+  role     TUserRoles @default(user)
+
+  messagesSent   conversations[] @relation("SentMessages")
+  messagesReceived conversations[] @relation("ReceivedMessages")
+
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+}
+
+model conversations {
+  id       Int        @id @default(autoincrement())
+
+  sender_id    Int
+  sender      users     @relation("SentMessages", fields: [sender_id], references: [id])
+
+  receiver_id  Int
+  receiver    users     @relation("ReceivedMessages", fields: [receiver_id], references: [id])
+
+  messages messages[]
+
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+
+  @@index([sender_id])
+  @@index([receiver_id])
+}
+
+model messages {
+  id      Int    @id @default(autoincrement())
+  content String
+
+  conversation_id Int
+  conversation conversations @relation(fields: [conversation_id],references: [id])
+
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
+
+  @@index([conversation_id])
+}

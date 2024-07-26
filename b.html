@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style>
+        .receivers {
+            display: flex;
+            gap: 10px;
+        }
+
+        .users {
+            color: blue;
+            cursor: pointer;
+        }
+
+        .users:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="receivers"></div>
+    <div id="messages"></div>
+    <div id="sendMessageForm"></div>
+</body>
+<script>
+    const receivers = document.getElementById('receivers');
+    const messages = document.getElementById('messages');
+    const sendMessageForm = document.getElementById('sendMessageForm');
+
+    fetchReceivers = async () => {
+        try {
+            const res = await fetch('http://localhost:3005/api/v1/conversations', {
+                headers: {
+                    Authorization: 'Bearer ' + localStorage.getItem('access_token'),
+                },
+            });
+
+            const socket = new WebSocket('ws://localhost:3006/')
+
+            const data = await res.json();
+            data.map((item, i) => {
+                receivers.insertAdjacentHTML(
+                    'beforeEnd',
+                    '<div class="receivers">' +
+                    `<span>${i + 1}</span>`
+                    + `<button value="${item.receiver.id}" class="users" href="#">${item.receiver.name}</button>`
+                    + `<input type="hidden" value="${item.firstMessage.conversation_id}">`
+                    + '</div>'
+                );
+            })
+            const userButtons = document.querySelectorAll('.users');
+            let currentReceiverUserId;
+            userButtons.forEach(button => {
+                button.addEventListener('click', async (event) => {
+                    messages.innerHTML = ''
+                    sendMessageForm.innerHTML = ''
+                    currentReceiverUserId = event.target.value;
+                    const parent = event.target.closest('.receivers');
+                    const conversation_id = parent.querySelector('input').value;
+                    const res = await fetch(`http://localhost:3005/api/v1/conversations/${conversation_id}`, {
+                        headers: {
+                            Authorization: 'Bearer ' + localStorage.getItem('access_token'),
+                        },
+                    });
+
+                    const conversations = await res.json();
+                    conversations.messages.map((item, i) =>{
+                        messages.insertAdjacentHTML('beforeEnd',
+                            '<div>' +
+                            `<span>${item.content}</span>`
+                            +'</div>'
+                        )
+                    })
+                    sendMessageForm.insertAdjacentHTML('beforeEnd',
+                            '<form id="messageForm">' +
+                            '<input type="text" id="messageInput">'
+                            + '<button>send</button>'
+                            +'</form>'
+                        )
+                    
+                    const messageForm = document.getElementById('messageForm');
+                    const messageInput = document.getElementById('messageInput');
+                    messageForm.addEventListener('submit', async function(e) {
+                        e.preventDefault();
+
+                        try {
+                            const data = {
+                                receiver_id: currentReceiverUserId,
+                                content: messageInput.value
+                            }
+                            const res = await fetch('http://localhost:3005/api/v1/conversations', {
+                                method: 'POST',
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'Content-Type':'application/json',
+                                    Authorization: 'Bearer ' + localStorage.getItem('access_token'),
+                                },
+                                body: JSON.stringify(data)
+                            })
+                            const newMessage = await res.json();
+                            messages.insertAdjacentHTML('beforeBegin',
+                            '<div>' +
+                            `<span>${newMessage.content}</span>`
+                            +'</div>'
+                        )
+                        messageInput.value = ''
+                        } catch (error) {
+                            console.log(error);
+                        }
+                    })
+                });
+            });
+        } catch (error) {
+            console.log(error);
+        }
+    };
+
+    fetchReceivers();
+
+</script>
+
+</html>

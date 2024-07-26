@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+</head>
+
+<body>
+    <form id="myForm">
+        <input type="text" id="email" />
+        <input type="password" id="password" />
+        <button>f</button>
+    </form>
+    <button id="profile">profile</button>
+    <a href="/b.html">b</a>
+</body>
+<script>
+    const profile = document.getElementById('profile');
+    const myForm = document.getElementById('myForm');
+    const email = document.getElementById('email');
+    const password = document.getElementById('password');
+
+    myForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        try {
+            const reqData = {
+                email: email.value,
+                password: password.value,
+            };
+            const res = await fetch('http://localhost:3005/api/v1/users/login', {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(reqData),
+            });
+            if(!res.ok) {
+                const err = await res.json();
+                throw new Error(err.message);
+            }
+
+            const data = await res.json();
+            localStorage.setItem('access_token', data.access_token);
+            window.location.replace('http://127.0.0.1:5500/b.html')
+        } catch (error) { 
+            console.log(error.message);
+        }
+    });
+
+    profile.addEventListener('click', async function() {
+        const res = await fetch('http://localhost:3005/api/v1/users/profile/', {
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+            }
+        });
+
+        const data = await res.json();
+
+        console.log(data);
+    })
+
+</script>
+
+</html>
